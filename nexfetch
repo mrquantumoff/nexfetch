@@ -426,6 +426,12 @@ local_ip_interface=('auto')
 # Flag:    --de_version
 de_version="on"
 
+# Session type
+# Default: 'on'
+# Values: 'on', 'off'
+# Flag: --session-type
+de_session_type="on"
+
 
 # Disk
 
@@ -1881,12 +1887,7 @@ get_de() {
         de+=" $de_ver"
     fi
 
-    # TODO:
-    #  - New config option + flag: --de_display_server on/off ?
-    #  - Add display of X11, Arcan and anything else relevant.
-    [[ $de && $WAYLAND_DISPLAY ]] &&
-        de+=" (Wayland)"
-
+    $de && $de_session_type == on ; de+=" (${XDG_SESSION_TYPE})"
     de_run=1
 }
 
@@ -5263,6 +5264,7 @@ get_args() {
             "--gtk_shorthand") gtk_shorthand="$2" ;;
             "--gtk2") gtk2="$2" ;;
             "--gtk3") gtk3="$2" ;;
+            "--session_type") de_session_type="$2" ;;
             "--shell_path") shell_path="$2" ;;
             "--shell_version") shell_version="$2" ;;
             "--ip_host") public_ip_host="$2" ;;
@@ -5433,6 +5435,7 @@ get_args() {
                 exit 1
             ;;
             "--gen-man")
+                printf "Warning: this man pages might not be complete!"
                 help2man -n "A fast, highly customizable system info script" \
                           -N ./nexfetch -o nexfetch.1
                 exit 1
@@ -5447,60 +5450,6 @@ get_args() {
                 printf '    %s\n' "\"Version\": \"${version}\""
                 printf '}\n'
                 exit
-            ;;
-
-            "--travis")
-                print_info() {
-                    info title
-                    info underline
-
-                    info "OS" distro
-                    info "Host" model
-                    info "Kernel" kernel
-                    info "Uptime" uptime
-                    info "Packages" packages
-                    info "Shell" shell
-                    info "Resolution" resolution
-                    info "DE" de
-                    info "WM" wm
-                    info "WM Theme" wm_theme
-                    info "Theme" theme
-                    info "Icons" icons
-                    info "Terminal" term
-                    info "Terminal Font" term_font
-                    info "CPU" cpu
-                    info "GPU" gpu
-                    info "GPU Driver" gpu_driver
-                    info "Memory" memory
-
-                    info "Disk" disk
-                    info "Battery" battery
-                    info "Font" font
-                    info "Song" song
-                    info "Local IP" local_ip
-                    info "Public IP" public_ip
-                    info "Users" users
-
-                    info cols
-
-                    # Testing.
-                    prin "prin"
-                    prin "prin" "prin"
-
-                    # Testing no subtitles.
-                    info uptime
-                    info disk
-                }
-
-                refresh_rate="on"
-                shell_version="on"
-                memory_display="infobar"
-                disk_display="infobar"
-                cpu_temp="C"
-
-                # Known implicit unused variables.
-                mpc_args=()
-                printf '%s\n' "$kernel $icons $font $battery $locale ${mpc_args[*]}"
             ;;
         esac
 
