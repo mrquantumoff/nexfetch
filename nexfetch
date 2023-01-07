@@ -5435,7 +5435,7 @@ get_args() {
                 exit 1
             ;;
             "--gen-man")
-                printf "Warning: this man pages might not be complete!"
+                printf "Warning: this man page might not be complete!\n"
                 help2man -n "A fast, highly customizable system info script" \
                           -N ./nexfetch -o nexfetch.1
                 exit 1
