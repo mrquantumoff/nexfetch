@@ -790,7 +790,7 @@ image_source="auto"
 # NOTE: AIX, Hash, Alpine, AlterLinux, Amazon, Anarchy, Android, instantOS,
 #       Antergos, antiX, "AOSC OS", "AOSC OS/Retro", Apricity, ArchCraft,
 #       ArcoLinux, ArchBox, ARCHlabs, ArchStrike, XFerience, ArchMerge, Arch,
-#       Artix, Arya, Bedrock, Bitrig, BlackArch, BLAG, BlankOn, BlueLight,
+#       Artix, Arya, Aster, Bedrock, Bitrig, BlackArch, BLAG, BlankOn, BlueLight,
 #       Bodhi, bonsai, BSD, BunsenLabs, Calculate, Carbs, CentOS, Chakra, ChaletOS,
 #       Chapeau, Chrom*, Cleanjaro, ClearOS, Clear_Linux, Clover, Condres,
 #       Container_Linux, Crystal Linux, CRUX, Cucumber, dahlia, Debian, Deepin,
@@ -814,7 +814,7 @@ image_source="auto"
 #       openSUSE_Tumbleweed, openSUSE, SwagArch, Tails, Trisquel,
 #       Ubuntu-Cinnamon, Ubuntu-Budgie, Ubuntu-GNOME, Ubuntu-MATE,
 #       Ubuntu-Studio, Ubuntu, Univention, Venom, Void, VNux, LangitKetujuh, semc,
-#       Obarun, windows10, Windows7, Xubuntu, Zorin, and IRIX have ascii logos.
+#       Obarun, windows10, Windows7, Xubuntu, Zorin, Vanilla, and IRIX have ascii logos.
 # NOTE: Arch, Ubuntu, Redhat, Fedora and Dragonfly have 'old' logo variants.
 #       Use '{distro name}_old' to use the old logos.
 # NOTE: Ubuntu has flavor variants.
@@ -1162,6 +1162,7 @@ get_distro() {
                 10.16*) codename="macOS Big Sur" ;;
                 11.*)  codename="macOS Big Sur" ;;
                 12.*)  codename="macOS Monterey" ;;
+                13.*)  codename="macOS Ventura" ;;
                 *)      codename=macOS ;;
             esac
 
@@ -1267,7 +1268,14 @@ get_model() {
             if [[ $(kextstat | grep -F -e "FakeSMC" -e "VirtualSMC") != "" ]]; then
                 model="Hackintosh (SMBIOS: $(sysctl -n hw.model))"
             else
-                model=$(sysctl -n hw.model)
+                if [[ $osx_version =~ "10.4" || $osx_version =~ "10.5" ]]; then
+                    model="$(system_profiler SPHardwareDataType | grep Machine\ Name\:)"
+                    model=${model/Machine\ Name\:/}
+
+                    model="$model ($(sysctl -n hw.model))"
+                else
+                    model=$(sysctl -n hw.model)
+                fi
             fi
         ;;
 
@@ -2293,7 +2301,20 @@ get_cpu() {
         ;;
 
         "Mac OS X"|"macOS")
-            cpu="$(sysctl -n machdep.cpu.brand_string)"
+            if [[ $osx_version =~ "10.4" || $osx_version =~ "10.5" ]]; then
+                cpu="$(system_profiler SPHardwareDataType | grep CPU\ Type)"
+                cpu="${cpu/CPU\ Type\:/}"
+
+                speed="$(system_profiler SPHardwareDataType | grep CPU\ Speed)"
+                speed="${speed/CPU\ Speed\:/}"
+		speed="${speed/ MHz/}"
+		speed="${speed/ GHz/}"
+
+                cores="$(system_profiler SPHardwareDataType | grep Number\ Of\ CPUs)"
+                cores="${cores/Number\ Of\ CPUs\:/}"
+            else
+                cpu="$(sysctl -n machdep.cpu.brand_string)"
+            fi
 
             # Get CPU cores.
             case $cpu_cores in
@@ -2715,13 +2736,30 @@ get_memory() {
         ;;
 
         "Mac OS X" | "macOS" | "iPhone OS")
-            hw_pagesize="$(sysctl -n hw.pagesize)"
-            mem_total="$(($(sysctl -n hw.memsize) / 1024 / 1024))"
-            pages_app="$(($(sysctl -n vm.page_pageable_internal_count) - $(sysctl -n vm.page_purgeable_count)))"
-            pages_wired="$(vm_stat | awk '/ wired/ { print $4 }')"
-            pages_compressed="$(vm_stat | awk '/ occupied/ { printf $5 }')"
-            pages_compressed="${pages_compressed:-0}"
-            mem_used="$(((${pages_app} + ${pages_wired//.} + ${pages_compressed//.}) * hw_pagesize / 1024 / 1024))"
+            if [[ $osx_version =~ "10.4" || $osx_version =~ "10.5" ]]; then
+                mem_total="$(system_profiler SPHardwareDataType | grep Memory:)"
+                mem_total="${mem_total/Memory\: /}"
+                mem_total="${mem_total/ MB/}"
+
+                mem_used="$(vm_stat | grep Pages\ active\:)"
+                mem_used="${mem_used/Pages active\: /}"
+                mem_used="${mem_used/\./}"
+
+		pages_inactive=$(vm_stat | grep "Pages inactive")
+		pages_inactive=${pages_inactive/Pages inactive\: /}
+		pages_inactive=${pages_inactive/\./}
+
+		mem_used=$((mem_used + pages_inactive))
+                mem_used=$((mem_used * 4096 / 1048576))
+            else
+                hw_pagesize="$(sysctl -n hw.pagesize)"
+                mem_total="$(($(sysctl -n hw.memsize) / 1024 / 1024))"
+                pages_app="$(($(sysctl -n vm.page_pageable_internal_count) - $(sysctl -n vm.page_purgeable_count)))"
+                pages_wired="$(vm_stat | awk '/ wired/ { print $4 }')"
+                pages_compressed="$(vm_stat | awk '/ occupied/ { printf $5 }')"
+                pages_compressed="${pages_compressed:-0}"
+                mem_used="$(((${pages_app} + ${pages_wired//.} + ${pages_compressed//.}) * hw_pagesize / 1024 / 1024))"
+            fi
         ;;
 
         "BSD" | "MINIX")
@@ -4095,6 +4133,10 @@ print_ascii() {
         return
     }
 
+    if [[ $custom_ascii_len -gt 0 ]];then
+        ascii_len="$custom_ascii_len"
+    fi
+
     # Colors.
     ascii_data="${ascii_data//\$\{c1\}/$c1}"
     ascii_data="${ascii_data//\$\{c2\}/$c2}"
@@ -5154,7 +5196,7 @@ ASCII:
                                 NOTE: AIX, Hash, Alpine, AlterLinux, Amazon, Anarchy, Android,
                                 instantOS, Antergos, antiX, \"AOSC OS\", \"AOSC OS/Retro\",
                                 Apricity, ArchCraft, ArcoLinux, ArchBox, ARCHlabs, ArchStrike,
-                                XFerience, ArchMerge, Arch, Artix, Arya, Bedrock, Bitrig,
+                                XFerience, ArchMerge, Arch, Artix, Arya, Aster, Bedrock, Bitrig,
                                 BlackArch, BLAG, BlankOn, BlueLight, Bodhi, bonsai, BSD, BunsenLabs,
                                 Calculate, Carbs, CentOS, Chakra, ChaletOS, Chapeau, Chrom,
                                 Cleanjaro, ClearOS, Clear_Linux, Clover, Condres, Container_Linux,
@@ -5380,6 +5422,8 @@ get_args() {
                     *) image_source="$2" ;;
                 esac
             ;;
+
+           "--ascii-len") custom_ascii_len="$2";;
 
             # Image options
             "--loop") image_loop="on" ;;
@@ -6224,6 +6268,30 @@ ${c4}                   %%%%%
 ${c4}                    %%%
 EOF
         ;;
+
+        "Aster"*)
+            set_colors 6 6
+            read -rd '' ascii_data <<'EOF'
+${c1}                      ...''...
+${c1}                 .;oOXWMWNXXXNMMN0d:.
+${c1}              .oXMWOo;..       ..:oO;
+${c1}            ;KMWx,       co,
+${c1}          'KMNl         dMMW.
+${c1}         oMMx          xMMMMk
+${c1}        xMM:          dMMMMMM;
+${c1}       cMMl          dMMMMMMMW
+${c1}       NMK          xMMMx::dXMx
+${c1}      ,MMl         xMMN'     .o.
+${c1}      cMM;        dMMW'
+${c1}      ;MMc       oMMW,
+${c1}       WMK      dMMW,  ccccccc.
+${c1}       lMMl    oMMM;   ooooooo.
+${c1}        OMMc   ...
+${c1}         xMMx
+${c1}          ;XMN:
+${c1}            ,.
+EOF
+      ;;
 
         "Bedrock"*)
             set_colors 8 7
@@ -10143,9 +10211,29 @@ ${c1}
 EOF
         ;;
 
+        "RhaymOS"*)
+            set_colors 1
+            read -rd '' ascii_data <<'EOF'
+${c1}
+                    ###
+                   #####
+
+              #######        /########
+           #############   ###########
+   ,###########      ####  ####(..
+  ####   ####       ####*  ##########
+  ####    #####     #####         (####
+  ####      ###########    ###########
+  ####       #########     ##########
+
+  ###################################
+ #####################################
+#######################################
+EOF
+    ;;
         "rocky_small"*)
             set_colors 2
-                read -rd '' ascii_data <<'EOF'
+            read -rd '' ascii_data <<'EOF'
 ${c1}    `-/+++++++++/-.`
  `-+++++++++++++++++-`
 .+++++++++++++++++++++.
@@ -10941,7 +11029,7 @@ sssss${c2}yMMMMMmhy${c1}ssssssssssss${c2}NM${c1}ss${c2}dMy${c1}sssssss
 EOF
         ;;
 
-        "ubuntu_old")
+        "ubuntu_old02")
             set_colors 1 7 3
             read -rd '' ascii_data <<'EOF'
 ${c1}                         ./+o+-
@@ -10992,18 +11080,23 @@ EOF
         ;;
 
         "ubuntu_small")
-            set_colors 1 7 3
+            set_colors 1
             read -rd '' ascii_data <<'EOF'
-${c1}         _
-     ---(_)
- _/  ---  \\
-(_) |   |
-  \\  --- _/
-     ---(_)
+${c1}       ..;,; .,;,.
+    .,lool: .ooooo,
+   ;oo;:    .coool.
+ ....         ''' ,l;
+:oooo,            'oo.
+looooc            :oo'
+ '::'             ,oo:
+   ,.,       .... co,
+    lo:;.   :oooo; .
+     ':ooo; cooooc
+        '''  ''''
 EOF
         ;;
 
-        "Ubuntu"* | "i3buntu"*)
+        "Ubuntu_old"* | "i3buntu"*)
             set_colors 1 7 3
             read -rd '' ascii_data <<'EOF'
 ${c1}            .-/+oossssoo+\-.
@@ -11026,6 +11119,33 @@ oss${c2}yNMMMNyMMh${c1}sssssssssssssshmmmh${c1}ssssssso
       -+sssssssssssssssss${c2}yyy${c1}ssss+-
         `:+ssssssssssssssssss+:`
             .-\+oossssoo+/-.
+EOF
+        ;;
+
+         "Ubuntu"*)
+            set_colors 1
+            read -rd '' ascii_data <<'EOF'
+${c1}                             ....
+              .',:clooo:  .:looooo:.
+           .;looooooooc  .oooooooooo'
+        .;looooool:,''.  :ooooooooooc
+       ;looool;.         'oooooooooo,
+      ;clool'             .cooooooc.  ,,
+         ...                ......  .:oo,
+  .;clol:,.                        .loooo'
+ :ooooooooo,                        'ooool
+'ooooooooooo.                        loooo.
+'ooooooooool                         coooo.
+ ,loooooooc.                        .loooo.
+   .,;;;'.                          ;ooooc
+       ...                         ,ooool.
+    .cooooc.              ..',,'.  .cooo.
+      ;ooooo:.           ;oooooooc.  :l.
+       .coooooc,..      coooooooooo.
+         .:ooooooolc:. .ooooooooooo'
+           .':loooooo;  ,oooooooooc
+               ..';::c'  .;loooo:'
+                             .
 EOF
         ;;
 
@@ -11178,6 +11298,32 @@ EOF
 
         ;;
 
+       "Vanilla"*)
+            set_colors 11 15
+            read -rd '' ascii_data <<'EOF'
+${c1}
+                .----:
+               .-------.
+              :---::----:
+             .----::-----.
+  .........  :----::-----: ..:::-::::..
+.-----------------::------------------:
+  ----::-----------::----------::::---:
+   -----:::--------::-------:::-------
+    :------::::--::...:::::---------:
+     .---------::..    ..:---------.
+      .::-----::..    .::----::.
+        .:------:.......:-------:
+       .--------::::::::-:::-------.
+      .-------::-----.:-----::------.
+     -----::------:   :------::-----
+    :--::--------:     .-------::---:
+   :----------::         .:----------
+
+EOF
+        ;;
+
+
         "Obarun"*)
             set_colors 6 6 7 1
             read -rd '' ascii_data <<'EOF'
@@ -11208,21 +11354,23 @@ EOF
             set_colors 6 7
             read -rd '' ascii_data <<'EOF'
 ${c1}
-################  ################
-################  ################
-################  ################
-################  ################
-################  ################
-################  ################
-################  ################
+,,**************/ ///////////////()
+****************/ ///////////////((
+***************// //////////////(((
+**************/// ////////////(((((
+************///// /////////((((((((
+*********//////// /////((((((((((((
+*******////////// ///((((((((((((((
+****///////////// (((((((((((((((((
 
-################  ################
-################  ################
-################  ################
-################  ################
-################  ################
-################  ################
-################  ################
+/////////////(((( (((((((((((((((((
+////////////((((( (((((((((((((((((
+///////////(((((( (((((((((((((((((
+/////////(((((((( (((((((((((((((((
+///////(((((((((( (((((((((((((((((
+////((((((((((((( (((((((((((((((((
+((((((((((((((((( (((((((((((((((((
+((((((((((((((((( (((((((((((((((()
 EOF
         ;;
 
