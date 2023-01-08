@@ -5547,12 +5547,10 @@ get_args() {
 
 
 about() {
-    printf "NEXFETCH v${version}\n"
+    printf "NEXFETCH v${version} \n"
     printf "Forked from https://github.com/dylanaraps/neofetch \nCurrently maintained by @mrquantumoff at https://github.com/mrquantumoff/nexfetch \nOriginally created by Dylan Araps"
-
-
-
-    printf "\n*"
+    printf "Copyright (c) 2015-2021 Dylan Araps\nCopyright (c) 2023 MrQuantumOFF (Demir Yerli)\nCopyright (c) 2015-present Neofetch and Nexfetch contributors"
+    printf "\n"
 }
 
 get_simple() {
