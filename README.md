@@ -5,7 +5,7 @@
 <a href="./LICENSE.md"><img src="https://img.shields.io/github/license/mrquantumoff/nexfetch?color=blue&style=for-the-badge"></a>
 <a href="https://github.com/mrquantumoff/nexfetch/releases"><img src="https://img.shields.io/github/v/release/mrquantumoff/nexfetch?include_prereleases&style=for-the-badge"></a>
 </p>
-
+<a href="https://ko-fi.com/mrquantumoff"><img src="https://storage.ko-fi.com/cdn/brandasset/kofi_bg_tag_dark.png" alt="Support me on ko-fi!"/></a>
 <img src="https://i.imgur.com/GFmC5Ad.png" alt="nexfetch" align="right" height="240px">
 
 nexfetch is a command-line system information tool written in `bash`. nexfetch displays information about your operating system, software and hardware in an aesthetic and visually pleasing way.
